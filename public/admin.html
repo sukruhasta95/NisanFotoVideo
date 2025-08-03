@@ -1,0 +1,163 @@
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Panel</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #efb6b6;
+      margin: 0;
+      padding: 1rem;
+    }
+    h1 {
+      text-align: center;
+    }
+    .toolbar {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .media-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+    }
+    .file-preview {
+      position: relative;
+      display: inline-block;
+      margin: 10px;
+    }
+    
+    .file-preview video,
+    .file-preview img {
+      width: 200px;
+      height: auto;
+      display: block;
+    }
+    .media-card {
+      width: 200px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      overflow: hidden;
+      position: relative;
+    }
+    .media-card input[type="checkbox"] {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      transform: scale(1.5);
+      width: 10%;
+      height: 10%;
+      margin: 3%;
+      z-index: 10;
+    }
+    .media-card img, .media-card video {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .media-actions {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 4px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+    button.danger {
+      background-color: #dc3545;
+    }
+  </style>
+</head>
+<body>
+  <h1>Yüklenen Dosyalar</h1>
+  <div class="toolbar">
+    <button onclick="toggleSelectAll()">Tümünü Seç / Temizle</button>
+    <button onclick="downloadSelected()">Seçilenleri İndir</button>
+    <button class="danger" onclick="deleteSelected()">Seçilenleri Sil</button>
+    <button onclick="location.reload()">Yenile</button>
+  </div>
+  <div class="media-grid" id="mediaGrid"></div>
+
+  <script>
+    let allSelected = false;
+
+    async function fetchMedia() {
+      const res = await fetch('/uploads');
+      const files = await res.json();
+      const grid = document.getElementById('mediaGrid');
+      grid.innerHTML = '';
+      files.forEach(file => {
+        const ext = file.split('.').pop().toLowerCase();
+        const isImage = ['jpg','jpeg','png','gif','webp'].includes(ext);
+        const isVideo = ['mp4','mov','webm'].includes(ext);
+
+        const card = document.createElement('div');
+        card.className = 'media-card';
+        card.innerHTML = `
+          <input type="checkbox" value="${file}">
+          ${isImage ? `<img src="/uploads/${file}">` : ''}
+          ${isVideo ? `<video controls src="/uploads/${file}"></video>` : ''}
+          <div class="media-actions">
+            <span>${file}</span>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function getSelectedFiles() {
+      return [...document.querySelectorAll('.media-card input[type="checkbox"]:checked')]
+        .map(cb => cb.value);
+    }
+
+    function toggleSelectAll() {
+      allSelected = !allSelected;
+      document.querySelectorAll('.media-card input[type="checkbox"]').forEach(cb => cb.checked = allSelected);
+    }
+
+    function downloadSelected() {
+      const selected = getSelectedFiles();
+      selected.forEach(file => {
+        const link = document.createElement('a');
+        link.href = '/uploads/' + file;
+        link.download = file;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      });
+    }
+
+    async function deleteSelected() {
+      const selected = getSelectedFiles();
+      if (selected.length === 0) return alert("Silmek için dosya seçin.");
+      if (!confirm(`${selected.length} dosya silinecek. Emin misiniz?`)) return;
+
+      const res = await fetch('/api/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files: selected })
+      });
+
+      if (res.ok) {
+        alert("Dosyalar silindi.");
+        fetchMedia();
+      } else {
+        alert("Silme işlemi başarısız.");
+      }
+    }
+
+    fetchMedia();
+  </script>
+</body>
+</html>
