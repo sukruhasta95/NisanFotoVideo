@@ -27,6 +27,12 @@
       margin-bottom: 8px;
     }
 
+    .remove-btn.disabled {
+      pointer-events: none;
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
     #fileCount {
       font-size: 16px;
       color: #444;
@@ -257,6 +263,9 @@
       for (const file of selectedFiles) {
         formData.append('media', file);
       }
+      document.querySelectorAll(".remove-btn").forEach(btn => {
+        btn.classList.add("disabled");
+      });
       uploadBtn.disabled = true;
       uploadBtn.innerHTML = 'Yükleniyor... <span class="loader"></span>';
       document.getElementById("selectBtn").disabled = true;
@@ -283,6 +292,9 @@
       } finally {
         uploadBtn.disabled = false;
         uploadBtn.innerText = '⬆️ Yükle';
+        document.querySelectorAll(".remove-btn").forEach(btn => {
+          btn.classList.remove("disabled");
+        });
         document.getElementById("selectBtn").disabled = false;
         document.getElementById("showGalleryBtn").disabled = false;
       }
