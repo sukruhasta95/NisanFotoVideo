@@ -252,12 +252,16 @@
     }
     async function uploadFiles() {
       if (!selectedFiles.length) return alert('Dosya seçilmedi.');
+
       const formData = new FormData();
       for (const file of selectedFiles) {
         formData.append('media', file);
       }
       uploadBtn.disabled = true;
       uploadBtn.innerHTML = 'Yükleniyor... <span class="loader"></span>';
+      document.getElementById("selectBtn").disabled = true;
+      document.getElementById("showGalleryBtn").disabled = true;
+
       try {
         const res = await fetch('/api/upload', {
           method: 'POST',
@@ -268,6 +272,9 @@
           successMessage.style.display = 'block';
           selectedFiles = [];
           updatePreview();
+          setTimeout(() => {
+            toggleGallery(); toggleGallery();
+          }, 30000);
         } else {
           alert('Yükleme hatası: ' + result.error);
         }
@@ -276,6 +283,8 @@
       } finally {
         uploadBtn.disabled = false;
         uploadBtn.innerText = '⬆️ Yükle';
+        document.getElementById("selectBtn").disabled = false;
+        document.getElementById("showGalleryBtn").disabled = false;
       }
     }
 
