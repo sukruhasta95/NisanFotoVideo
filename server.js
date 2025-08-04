@@ -24,7 +24,8 @@ app.use(express.static(publicDir));
 app.use('/upload', express.static(publicDir));
 app.use('/uploads', express.static(uploadsDir));
 app.use(express.json());
-
+app.use(express.json({ limit: '2gb' }));
+app.use(express.urlencoded({ extended: true, limit: '2gb' }));
 app.get('/', (req, res) => {
   res.sendFile(path.join(publicDir, 'index.html'));
 });
@@ -37,7 +38,7 @@ app.get('/admin', basicAuth({
 });
 
 app.post('/api/upload', (req, res) => {
-  upload.array('media', 100)(req, res, (err) => {
+  upload.array('media', 1000)(req, res, (err) => {
     if (err) return res.status(500).json({ success: false, error: err.message });
     if (!req.files) return res.status(400).json({ success: false, error: 'Dosya alınamadı' });
     res.json({ success: true, files: req.files.map(f => f.filename) });
