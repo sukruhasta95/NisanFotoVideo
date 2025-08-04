@@ -178,20 +178,18 @@
       }
     });
   </script>
-  <h1>📸 Merve & Şükrü Nişanı</h1>
+  <h1>📸 Merve & Şükrü Nişan Anıları</h1>
   <p>Güzel anılarını bizimle paylaş!</p>
   <div id="fileCount"></div>
-
   <div id="drop-zone">
     <input type="file" id="fileInput" name="photos" accept="image/*,video/*" multiple />
     <button class="btn" id="selectBtn" onclick="document.getElementById('fileInput').click()">📁 Dosya Seç</button>
     <button class="btn" id="uploadBtn" onclick="uploadFiles()" disabled>⬆️ Yükle</button>
-
+    <button class="btn" id="showGalleryBtn" onclick="toggleGallery()">📂 Anıları Göster</button>
     <div id="preview-container"></div>
     <div id="status"></div>
     <div id="success-message">Katkınız için teşekkür ederiz! 🎉</div>
   </div>
-
   <script>
     const input = document.getElementById("fileInput");
     const uploadBtn = document.getElementById("uploadBtn");
@@ -199,29 +197,21 @@
     const status = document.getElementById("status");
     const successMessage = document.getElementById("success-message");
     const fileCountEl = document.getElementById("fileCount");
-
     let selectedFiles = [];
-
     input.addEventListener("change", () => {
       const newFiles = Array.from(input.files);
-
-      // Aynı isim ve boyuttaki dosya zaten varsa ekleme
       newFiles.forEach(file => {
         const exists = selectedFiles.some(f => f.name === file.name && f.size === file.size);
         if (!exists) {
           selectedFiles.push(file);
         }
       });
-
-      input.value = ""; // aynı dosyayı tekrar seçmeye izin vermek için
+      input.value = "";
       updatePreview();
     });
-
     function updatePreview() {
       previewContainer.innerHTML = "";
       uploadBtn.disabled = selectedFiles.length === 0;
-
-      // dosya sayısını yazdır
       if (selectedFiles.length === 0) {
         fileCountEl.innerText = "";
       } else {
@@ -232,12 +222,9 @@
         if (videoCount > 0) parts.push(`${videoCount} video`);
         fileCountEl.innerText = parts.join(" ve ") + " seçildi";
       }
-
-      // önizlemeleri oluştur
       selectedFiles.forEach((file, index) => {
         const preview = document.createElement("div");
         preview.className = "preview";
-
         const removeBtn = document.createElement("button");
         removeBtn.className = "remove-btn";
         removeBtn.innerText = "×";
@@ -245,7 +232,6 @@
           selectedFiles.splice(index, 1);
           updatePreview();
         };
-
         if (file.type.startsWith("image/")) {
           const img = document.createElement("img");
           img.src = URL.createObjectURL(file);
@@ -256,29 +242,23 @@
           video.controls = true;
           preview.appendChild(video);
         }
-
         preview.appendChild(removeBtn);
         previewContainer.appendChild(preview);
       });
     }
-
     async function uploadFiles() {
       if (!selectedFiles.length) return alert('Dosya seçilmedi.');
-    
       const formData = new FormData();
       for (const file of selectedFiles) {
         formData.append('media', file);
       }
-    
       uploadBtn.disabled = true;
       uploadBtn.innerHTML = 'Yükleniyor... <span class="loader"></span>';
-    
       try {
         const res = await fetch('/api/upload', {
           method: 'POST',
           body: formData
         });
-    
         const result = await res.json();
         if (result.success) {
           successMessage.style.display = 'block';
@@ -294,7 +274,90 @@
         uploadBtn.innerText = '⬆️ Yükle';
       }
     }
-    
+
+  </script>
+  <div id="gallery" style="display: none; margin-top: 30px;">
+    <h3>Yüklenen Fotoğraf ve Videolar</h3>
+    <div style="margin-bottom: 15px;">
+      <button class="btn" onclick="downloadSelected()">⬇️ Seçilenleri İndir</button>
+    </div>
+    <div id="galleryContainer" style="display: flex; flex-wrap: wrap; gap: 15px; justify-content: center;"></div>
+  </div>
+
+  <script>
+    let allGalleryFiles = [];
+
+    async function toggleGallery() {
+      const gallery = document.getElementById("gallery");
+      const container = document.getElementById("galleryContainer");
+
+      if (gallery.style.display === "none") {
+        gallery.style.display = "block";
+        container.innerHTML = "";
+        const res = await fetch('/uploads');
+        const files = await res.json();
+        allGalleryFiles = files;
+        files.forEach(file => {
+          const ext = file.split('.').pop().toLowerCase();
+          const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+          const isVideo = ['mp4', 'mov', 'avi', 'webm'].includes(ext);
+          const wrapper = document.createElement("div");
+          wrapper.className = "gallery-item";
+          wrapper.style.position = "relative";
+          wrapper.style.width = "160px";
+          wrapper.style.border = "1px solid #ccc";
+          wrapper.style.borderRadius = "10px";
+          wrapper.style.overflow = "hidden";
+          wrapper.style.boxShadow = "0 2px 6px rgba(0,0,0,0.1)";
+          wrapper.style.background = "#fff";
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.value = file;
+          checkbox.className = "gallery-checkbox";
+          checkbox.style.position = "absolute";
+          checkbox.style.top = "5px";
+          checkbox.style.left = "5px";
+          checkbox.style.width = "20px";
+          checkbox.style.height = "20px";
+          checkbox.style.zIndex = "10";
+          wrapper.appendChild(checkbox);
+          if (isImage) {
+            const img = document.createElement("img");
+            img.src = `/uploads/${file}`;
+            img.style.width = "100%";
+            img.style.height = "120px";
+            img.style.objectFit = "cover";
+            wrapper.appendChild(img);
+          } else if (isVideo) {
+            const vid = document.createElement("video");
+            vid.src = `/uploads/${file}`;
+            vid.controls = true;
+            vid.style.width = "100%";
+            vid.style.height = "120px";
+            wrapper.appendChild(vid);
+          }
+          container.appendChild(wrapper);
+        });
+      } else {
+        gallery.style.display = "none";
+      }
+    }
+    function downloadSelected() {
+      const checkboxes = document.querySelectorAll('.gallery-checkbox:checked');
+      if (checkboxes.length === 0) {
+        alert("Lütfen indirilecek dosya(ları) seçin.");
+        return;
+      }
+      checkboxes.forEach(cb => {
+        const link = document.createElement('a');
+        link.href = `/uploads/${cb.value}`;
+        link.download = cb.value;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      });
+    }
   </script>
 </body>
 
