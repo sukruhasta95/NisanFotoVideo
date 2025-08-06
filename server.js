@@ -106,6 +106,13 @@ app.post('/api/delete', express.json(), async (req, res) => {
   else res.json({ success: true });
 });
 
+app.post('/upload-speed-test', (req, res) => {
+  let size = 0;
+  req.on('data', chunk => size += chunk.length);
+  req.on('end', () => {
+    res.json({ receivedBytes: size });
+  });
+});
 app.listen(PORT, () => {
   console.log(`🚀 Sunucu çalışıyor: http://localhost:${PORT}`);
 });

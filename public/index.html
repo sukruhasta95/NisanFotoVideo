@@ -240,14 +240,23 @@
       xhr.upload.addEventListener('progress', e => {
         if (e.lengthComputable) {
           const percent = (e.loaded / e.total) * 100;
-          const elapsed = (Date.now() - startTime) / 1000;
-          const speed = e.loaded / elapsed;
           const remaining = e.total - e.loaded;
-          const secondsRemaining = remaining / speed;
+
+          // Upload hızı Byte/s cinsine çevriliyor
+          const uploadSpeedBytesPerSec = (estimatedUploadSpeedMbps * 1024 * 1024) / 8;
+
+          const secondsRemaining = remaining / uploadSpeedBytesPerSec;
 
           document.getElementById('progressWrapper').style.display = 'block';
           document.getElementById('progressBar').style.width = percent.toFixed(1) + '%';
-          document.getElementById('remainingTime').innerText = `Kalan süre: ${formatTime(secondsRemaining)} sn`;
+
+          if (secondsRemaining > 60) {
+            const mins = Math.floor(secondsRemaining / 60);
+            const secs = Math.ceil(secondsRemaining % 60);
+            document.getElementById('remainingTime').innerText = `Kalan süre: ${mins} dakika ${secs} saniye`;
+          } else {
+            document.getElementById('remainingTime').innerText = `Kalan süre: ${Math.ceil(secondsRemaining)} saniye`;
+          }
         }
       });
 
@@ -266,7 +275,7 @@
             document.getElementById('progressWrapper').style.display = 'none';
             document.getElementById('success-message').style.display = 'block';
           }, 3000);
-           setTimeout(() => {
+          setTimeout(() => {
             document.getElementById('success-message').style.display = 'none';
           }, 10000);
         }
@@ -376,6 +385,27 @@
       });
     }
   </script>
+
+  <script>
+    let estimatedUploadSpeedMbps = 15;
+    async function testUploadSpeed() {
+      const size = 5 * 1024 * 1024;
+      const testData = new Uint8Array(size).fill(97);
+
+      const start = performance.now();
+      await fetch("/upload-speed-test", {
+        method: "POST",
+        body: testData
+      });
+      const duration = (performance.now() - start) / 1000; // saniye
+      const speedBps = size / duration;
+      const speedMbps = (speedBps * 8) / (1024 * 1024);
+      estimatedUploadSpeedMbps = speedMbps;
+      console.log(`estimatedUploadSpeedMbps: ${estimatedUploadSpeedMbps} mbps`);
+    }
+    testUploadSpeed();
+  </script>
+
 </body>
 
 </html>
