@@ -268,6 +268,7 @@
       );
       await Promise.all(sizeFetches);
       const estimatedSeconds = (totalSizeBytes) / (estimatedDownloadSpeedMbps * 1024 * 1024);
+      console.log("toplam dosya boyutu:",totalSizeBytes)
       let secondsRemaining = estimatedSeconds;
       countdownText.innerText = `Dosyalar hazırlanıyor. Tahmini süre: ${Math.ceil(secondsRemaining)} sn`;
       const countdownInterval = setInterval(() => {
@@ -313,6 +314,7 @@
         const duration = (end - start) / 1000;
         const bitsLoaded = blob.size * 8;
         estimatedDownloadSpeedMbps = bitsLoaded / duration / 1024 / 1024;
+         console.log("estimatedDownloadSpeedMbps", estimatedDownloadSpeedMbps);
       } catch (err) {
         console.log("Hız ölçümünde hata:", err);
       }
