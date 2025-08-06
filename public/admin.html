@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -31,7 +30,6 @@
       display: inline-block;
       margin: 10px;
     }
-    
     .file-preview video,
     .file-preview img {
       width: 200px;
@@ -77,6 +75,16 @@
     button.danger {
       background-color: #dc3545;
     }
+    .pagination {
+      display: flex;
+      justify-content: center;
+      margin-top: 1rem;
+      gap: 0.5rem;
+    }
+    .pagination button {
+      padding: 6px 12px;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
@@ -85,18 +93,25 @@
     <button onclick="toggleSelectAll()">Tümünü Seç / Temizle</button>
     <button onclick="downloadSelected()">Seçilenleri İndir</button>
     <button class="danger" onclick="deleteSelected()">Seçilenleri Sil</button>
-    <button onclick="location.reload()">Yenile</button>
+    <button onclick="fetchMedia(currentPage)">Yenile</button>
   </div>
   <div class="media-grid" id="mediaGrid"></div>
+  <div class="pagination" id="pagination"></div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script>
     let allSelected = false;
+    let currentPage = 1;
+    const pageSize = 20;
 
-    async function fetchMedia() {
-      const res = await fetch('/uploads');
-      const files = await res.json();
+    async function fetchMedia(page = 1) {
+      currentPage = page;
+      const res = await fetch(`/uploads?page=${page}&pageSize=${pageSize}`);
+      const { files, total } = await res.json();
+
       const grid = document.getElementById('mediaGrid');
       grid.innerHTML = '';
+
       files.forEach(file => {
         const ext = file.split('.').pop().toLowerCase();
         const isImage = ['jpg','jpeg','png','gif','webp'].includes(ext);
@@ -114,6 +129,22 @@
         `;
         grid.appendChild(card);
       });
+
+      renderPagination(total, page);
+    }
+
+    function renderPagination(total, page) {
+      const pageCount = Math.ceil(total / pageSize);
+      const pagination = document.getElementById('pagination');
+      pagination.innerHTML = '';
+
+      for (let i = 1; i <= pageCount; i++) {
+        const btn = document.createElement('button');
+        btn.textContent = i;
+        btn.disabled = i === page;
+        btn.onclick = () => fetchMedia(i);
+        pagination.appendChild(btn);
+      }
     }
 
     function getSelectedFiles() {
@@ -124,18 +155,6 @@
     function toggleSelectAll() {
       allSelected = !allSelected;
       document.querySelectorAll('.media-card input[type="checkbox"]').forEach(cb => cb.checked = allSelected);
-    }
-
-    function downloadSelected() {
-      const selected = getSelectedFiles();
-      selected.forEach(file => {
-        const link = document.createElement('a');
-        link.href = '/uploads/' + file;
-        link.download = file;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-      });
     }
 
     async function deleteSelected() {
@@ -151,10 +170,39 @@
 
       if (res.ok) {
         alert("Dosyalar silindi.");
-        fetchMedia();
+        fetchMedia(currentPage);
       } else {
         alert("Silme işlemi başarısız.");
       }
+    }
+
+    function downloadSelected() {
+      const selected = getSelectedFiles();
+      if (selected.length === 0) {
+        alert("Lütfen indirilecek dosya(ları) seçin.");
+        return;
+      }
+
+      const zip = new JSZip();
+      const folder = zip.folder("nisan-anilari");
+      let completed = 0;
+
+      selected.forEach(filename => {
+        fetch(`/uploads/${filename}`)
+          .then(res => res.blob())
+          .then(blob => {
+            folder.file(filename, blob);
+            completed++;
+            if (completed === selected.length) {
+              zip.generateAsync({ type: "blob" }).then(content => {
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(content);
+                a.download = "nisan-anilari.zip";
+                a.click();
+              });
+            }
+          });
+      });
     }
     fetchMedia();
   </script>

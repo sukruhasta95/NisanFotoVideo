@@ -71,11 +71,27 @@ app.post('/api/upload', (req, res) => {
 app.get('/uploads', async (req, res) => {
   try {
     const files = await fsp.readdir(uploadsDir);
-    res.json(files);
+    const sortedFiles = files.sort((a, b) => {
+      const aTimestamp = parseInt(a.split('-')[0]);
+      const bTimestamp = parseInt(b.split('-')[0]);
+      return bTimestamp - aTimestamp;
+    });
+
+    const page = parseInt(req.query.page) || 1;
+    const pageSize = parseInt(req.query.pageSize) || 20;
+    const start = (page - 1) * pageSize;
+    const pagedFiles = sortedFiles.slice(start, start + pageSize);
+    res.json({
+      total: sortedFiles.length,
+      page,
+      pageSize,
+      files: pagedFiles
+    });
   } catch {
     res.status(500).json({ error: 'Dosyalar listelenemedi' });
   }
 });
+
 
 app.post('/api/delete', express.json(), async (req, res) => {
   const files = req.body.files;
