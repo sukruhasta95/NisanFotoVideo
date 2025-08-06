@@ -1,59 +1,36 @@
 const express = require('express');
-const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const fsp = require('fs/promises');
+const Busboy = require('busboy');
 const basicAuth = require('express-basic-auth');
-require('dotenv').config();
+const dotenv = require('dotenv');
+const { moveFile } = require('./utils/fileMover');
+
+dotenv.config();
 
 const app = express();
 const PORT = 3000;
 
 const uploadsDir = path.join(__dirname, 'uploads');
+const ramdiskDir = path.join(__dirname, 'ramdisk');
 const publicDir = path.join(__dirname, 'public');
 
 const adminUser = process.env.ADMIN_USER;
 const adminPass = process.env.ADMIN_PASS;
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+if (!adminUser || !adminPass) {
+  console.error('ADMIN_USER veya ADMIN_PASS eksik!');
+  process.exit(1);
+}
+
+[uploadsDir, ramdiskDir].forEach(dir => {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir);
 });
-const allowedTypes = [
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-  'image/heic',
-  'image/heif',
-  'video/mp4',
-  'video/quicktime',
-  'video/x-msvideo',
-  'video/x-matroska',
-  'video/webm',
-  'video/3gpp'];
-
-const fileFilter = (req, file, cb) => {
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Desteklenmeyen dosya türü'), false);
-  }
-};
-
-const upload = multer({
-  storage,
-  fileFilter,
-  limits: { fileSize: 1024 * 1024 * 1024 }
-});
-
 
 app.use(express.static(publicDir));
-app.use('/upload', express.static(publicDir));
 app.use('/uploads', express.static(uploadsDir));
-app.use(express.json());
-app.use(express.json({ limit: '2gb' }));
-app.use(express.urlencoded({ extended: true, limit: '2gb' }));
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(publicDir, 'index.html'));
 });
@@ -66,38 +43,53 @@ app.get('/admin', basicAuth({
 });
 
 app.post('/api/upload', (req, res) => {
-  upload.array('media', 1000)(req, res, (err) => {
-    if (err) return res.status(500).json({ success: false, error: err.message });
-    if (!req.files) return res.status(400).json({ success: false, error: 'Dosya alınamadı' });
-    res.json({ success: true, files: req.files.map(f => f.filename) });
-  });
-});
+  const busboy = Busboy({ headers: req.headers, limits: { fileSize: 1024 * 1024 * 1024 } });
+  const uploadedFiles = [];
 
-app.get('/uploads', (req, res) => {
-  fs.readdir(uploadsDir, (err, files) => {
-    if (err) return res.status(500).json({ error: 'Dosyalar listelenemedi' });
-    res.json(files);
-  });
-});
+  busboy.on('file', (name, file, info) => {
+    const { filename, mimeType } = info;
+    const safeName = Date.now() + '-' + path.basename(filename);
+    const tempPath = path.join(ramdiskDir, safeName);
+    const finalPath = path.join(uploadsDir, safeName);
+    const writeStream = fs.createWriteStream(tempPath);
+    file.pipe(writeStream);
 
-app.post('/api/delete', (req, res) => {
-  const filesToDelete = req.body.files;
-  if (!Array.isArray(filesToDelete)) {
-    return res.status(400).json({ error: 'Geçersiz veri formatı' });
-  }
-  let errors = [];
-  filesToDelete.forEach(file => {
-    const filePath = path.join(uploadsDir, file);
-    fs.unlink(filePath, err => {
-      if (err) errors.push(file);
+    writeStream.on('close', async () => {
+      await moveFile(tempPath, finalPath);
+      uploadedFiles.push(safeName);
     });
+
   });
-  setTimeout(() => {
-    if (errors.length > 0) res.status(500).json({ error: 'Bazı dosyalar silinemedi', failed: errors });
-    else res.json({ success: true });
-  }, 300);
+
+  busboy.on('finish', () => {
+    res.json({ success: true, files: uploadedFiles });
+  });
+
+  req.pipe(busboy);
+});
+
+app.get('/uploads', async (req, res) => {
+  try {
+    const files = await fsp.readdir(uploadsDir);
+    res.json(files);
+  } catch {
+    res.status(500).json({ error: 'Dosyalar listelenemedi' });
+  }
+});
+
+app.post('/api/delete', express.json(), async (req, res) => {
+  const files = req.body.files;
+  if (!Array.isArray(files)) return res.status(400).json({ error: 'Geçersiz veri' });
+
+  const results = await Promise.allSettled(files.map(f => fsp.unlink(path.join(uploadsDir, f))));
+  const failed = results
+    .map((r, i) => r.status === 'rejected' ? files[i] : null)
+    .filter(Boolean);
+
+  if (failed.length > 0) res.status(500).json({ error: 'Bazı dosyalar silinemedi', failed });
+  else res.json({ success: true });
 });
 
 app.listen(PORT, () => {
-  console.log(`Sunucu çalışıyor: http://localhost:${PORT}`);
+  console.log(`🚀 Sunucu çalışıyor: http://localhost:${PORT}`);
 });

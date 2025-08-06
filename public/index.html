@@ -166,28 +166,6 @@
 </head>
 
 <body>
-  <script>
-    document.addEventListener("DOMContentLoaded", async () => {
-      const extensions = ["jpg", "jpeg", "png", "webp", "gif"];
-      for (const ext of extensions) {
-        const path = `/upload/ms.${ext}`;
-        try {
-          const res = await fetch(path, { method: 'HEAD' });
-          if (res.ok) {
-            document.body.style.backgroundImage = `url("${path}")`;
-            document.body.style.backgroundColor = '#e2d1c3'
-            document.body.style.backgroundSize = 'contain';
-            document.body.style.backgroundPosition = 'center';
-            document.body.style.backgroundRepeat = 'no-repeat';
-            document.body.style.backgroundAttachment = 'fixed';
-            break;
-          }
-        } catch (_) {
-          // dosya yoksa denemeye devam
-        }
-      }
-    });
-  </script>
   <h1>📸 Merve & Şükrü Nişan Anıları</h1>
   <p>Güzel anılarını bizimle paylaş!</p>
   <div id="fileCount"></div>
