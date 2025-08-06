@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
   <meta charset="UTF-8">
   <title>Admin Panel</title>
@@ -10,40 +11,47 @@
       margin: 0;
       padding: 1rem;
     }
+
     h1 {
       text-align: center;
     }
+
     .toolbar {
       display: flex;
       justify-content: center;
       gap: 1rem;
       margin-bottom: 1rem;
     }
+
     .media-grid {
       display: flex;
       flex-wrap: wrap;
       gap: 1rem;
       justify-content: center;
     }
+
     .file-preview {
       position: relative;
       display: inline-block;
       margin: 10px;
     }
+
     .file-preview video,
     .file-preview img {
       width: 200px;
       height: auto;
       display: block;
     }
+
     .media-card {
       width: 200px;
       background: white;
       border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
       overflow: hidden;
       position: relative;
     }
+
     .media-card input[type="checkbox"] {
       position: absolute;
       top: 5px;
@@ -54,16 +62,20 @@
       margin: 3%;
       z-index: 10;
     }
-    .media-card img, .media-card video {
+
+    .media-card img,
+    .media-card video {
       width: 100%;
       height: auto;
       display: block;
     }
+
     .media-actions {
       display: flex;
       justify-content: space-between;
       padding: 0.5rem;
     }
+
     button {
       padding: 0.5rem 1rem;
       border: none;
@@ -72,22 +84,73 @@
       color: white;
       cursor: pointer;
     }
+
     button.danger {
       background-color: #dc3545;
     }
+
     .pagination {
       display: flex;
       justify-content: center;
       margin-top: 1rem;
       gap: 0.5rem;
     }
+
     .pagination button {
       padding: 6px 12px;
       font-size: 14px;
     }
+
+    .loader {
+      border: 6px solid #6e30e9;
+      border-top: 6px solid #feddc1;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+
+    #loadingOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(255, 255, 255, 0.7);
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      pointer-events: all;
+    }
+
+    #countdownText {
+      font-size: 22px;
+      font-weight: bold;
+      color: #333;
+      margin-top: 15px;
+      text-align: center;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
   </style>
 </head>
+
 <body>
+  <div id="loadingOverlay">
+    <div class="loader"></div>
+    <div id="countdownText">Dosyalar hazırlanıyor...</div>
+  </div>
   <h1>Yüklenen Dosyalar</h1>
   <div class="toolbar">
     <button onclick="toggleSelectAll()">Tümünü Seç / Temizle</button>
@@ -114,8 +177,8 @@
 
       files.forEach(file => {
         const ext = file.split('.').pop().toLowerCase();
-        const isImage = ['jpg','jpeg','png','gif','webp'].includes(ext);
-        const isVideo = ['mp4','mov','webm'].includes(ext);
+        const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+        const isVideo = ['mp4', 'mov', 'webm'].includes(ext);
 
         const card = document.createElement('div');
         card.className = 'media-card';
@@ -175,36 +238,91 @@
         alert("Silme işlemi başarısız.");
       }
     }
+    fetchMedia();
+  </script>
 
-    function downloadSelected() {
+  <script>
+    async function downloadSelected() {
       const selected = getSelectedFiles();
       if (selected.length === 0) {
         alert("Lütfen indirilecek dosya(ları) seçin.");
         return;
       }
 
+      const overlay = document.getElementById('loadingOverlay');
+      const countdownText = document.getElementById('countdownText');
+      overlay.style.display = 'flex';
+      overlay.style.zIndex = '9999';
+
       const zip = new JSZip();
       const folder = zip.folder("nisan-anilari");
       let completed = 0;
+      const fileSizes = [];
 
-      selected.forEach(filename => {
-        fetch(`/uploads/${filename}`)
-          .then(res => res.blob())
-          .then(blob => {
-            folder.file(filename, blob);
-            completed++;
-            if (completed === selected.length) {
-              zip.generateAsync({ type: "blob" }).then(content => {
-                const a = document.createElement("a");
-                a.href = URL.createObjectURL(content);
-                a.download = "nisan-anilari.zip";
-                a.click();
-              });
-            }
-          });
+      let totalSizeBytes = 0;
+      const sizeFetches = selected.slice(0, 3).map(filename =>
+        fetch(`/uploads/${filename}`, { method: "HEAD" }).then(res => {
+          const size = res.headers.get("Content-Length");
+          if (size) totalSizeBytes += parseInt(size);
+        })
+      );
+      await Promise.all(sizeFetches);
+      const estimatedSeconds = (totalSizeBytes) / (estimatedDownloadSpeedMbps * 1024 * 1024);
+      let secondsRemaining = estimatedSeconds;
+      countdownText.innerText = `Dosyalar hazırlanıyor. Tahmini süre: ${Math.ceil(secondsRemaining)} sn`;
+      const countdownInterval = setInterval(() => {
+        secondsRemaining -= 1;
+        if (secondsRemaining <= 0) return;
+        countdownText.innerText = `Dosyalar hazırlanıyor. Tahmini süre: ${Math.ceil(secondsRemaining)} sn`;
+      }, 1000);
+
+      for (const filename of selected) {
+        try {
+          const res = await fetch(`/uploads/${filename}`);
+          const blob = await res.blob();
+          folder.file(filename, blob);
+          completed++;
+        } catch (err) {
+          alert(`Dosya alınamadı ${filename}`);
+        }
+      }
+
+      clearInterval(countdownInterval);
+      countdownText.innerText = `Zip hazırlanıyor...`;
+      zip.generateAsync({ type: "blob" }).then(content => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(content);
+        a.download = "nisan-anilari.zip";
+        a.click();
+
+        overlay.style.display = 'none';
       });
     }
-    fetchMedia();
   </script>
+
+  <script>
+    let estimatedDownloadSpeedMbps = 30; 
+    async function measureDownloadSpeed() {
+      const testUrl = "https://speed.cloudflare.com/__down?bytes=5000000";
+      try {
+        const start = performance.now();
+        const response = await fetch(testUrl, { cache: "no-cache" });
+        const blob = await response.blob();
+        const end = performance.now();
+
+        const duration = (end - start) / 1000;
+        const bitsLoaded = blob.size * 8;
+        estimatedDownloadSpeedMbps = bitsLoaded / duration / 1024 / 1024;
+      } catch (err) {
+        console.log("Hız ölçümünde hata:", err);
+      }
+    }
+    measureDownloadSpeed();
+  </script>
+
+
+
+
 </body>
+
 </html>
