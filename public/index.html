@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="tr">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -16,16 +15,8 @@
       padding-top: 60px;
       color: #333;
     }
-
-    h1 {
-      font-size: 28px;
-      margin-bottom: 10px;
-    }
-
-    p {
-      font-size: 18px;
-      margin-bottom: 8px;
-    }
+    h1 { font-size: 28px; margin-bottom: 10px; }
+    p { font-size: 18px; margin-bottom: 8px; }
 
     .btn {
       padding: 10px 25px;
@@ -36,26 +27,10 @@
       cursor: pointer;
       transition: 0.3s;
     }
-
-    #selectBtn {
-      background: #888;
-      color: #fff;
-    }
-
-    #selectBtn:hover {
-      background: #555;
-    }
-
-    #uploadBtn {
-      background: #222;
-      color: #fff;
-    }
-
-    #uploadBtn:disabled {
-      background: #ccc;
-      color: #666;
-      cursor: not-allowed;
-    }
+    #selectBtn { background: #888; color: #fff; }
+    #selectBtn:hover { background: #555; }
+    #uploadBtn { background: #222; color: #fff; }
+    #uploadBtn:disabled { background: #ccc; color: #666; cursor: not-allowed; }
 
     #drop-zone {
       border: 2px dashed #aaa;
@@ -68,16 +43,13 @@
       background: rgba(255, 255, 255, 0.9);
       transition: all 0.3s ease;
     }
-
-    #fileCount {
-      font-size: 16px;
-      color: #444;
-      margin-bottom: 20px;
+    #drop-zone.dragover {
+      border-color: #4caf50;
+      background: rgba(255, 255, 255, 0.95);
     }
 
-    input[type="file"] {
-      display: none;
-    }
+    #fileCount { font-size: 16px; color: #444; margin-bottom: 20px; }
+    input[type="file"] { display: none; }
 
     #preview-container {
       display: flex;
@@ -86,7 +58,6 @@
       gap: 12px;
       margin-top: 15px;
     }
-
     .preview {
       position: relative;
       width: 100px;
@@ -96,49 +67,37 @@
       box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
       background: #f9f9f9;
     }
-
-    .preview img,
-    .preview video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
+    .preview img, .preview video { width: 100%; height: 100%; object-fit: cover; }
     .remove-btn {
       position: absolute;
-      top: 3px;
-      right: 6px;
+      top: 3px; right: 6px;
       background: rgba(0, 0, 0, 0.6);
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 20px;
-      height: 20px;
-      font-size: 14px;
-      cursor: pointer;
+      color: white; border: none; border-radius: 50%;
+      width: 20px; height: 20px; font-size: 14px; cursor: pointer;
     }
 
     .loader {
       border: 4px solid #f3f3f3;
       border-top: 4px solid #555;
       border-radius: 50%;
-      width: 24px;
-      height: 24px;
+      width: 24px; height: 24px;
       animation: spin 1s linear infinite;
-      display: inline-block;
-      vertical-align: middle;
-      margin-left: 10px;
+      display: inline-block; vertical-align: middle; margin-left: 10px;
     }
+    @keyframes spin { 0% {transform: rotate(0deg);} 100% {transform: rotate(360deg);} }
 
-    @keyframes spin {
-      0% {
-        transform: rotate(0deg);
-      }
-
-      100% {
-        transform: rotate(360deg);
-      }
+    /* Seçim Modalı */
+    #pickerOverlay {
+      display:none; position:fixed; inset:0; z-index:9999;
+      background: rgba(0,0,0,.6);
+      align-items:center; justify-content:center;
     }
+    .picker-sheet {
+      background:#111; color:#fff; width:min(520px,92vw);
+      border-radius:16px; padding:16px; text-align:center;
+    }
+    .picker-sheet .btn { width:100%; }
+    .hint { opacity:.85; font-size:13px; margin-top:6px }
   </style>
 </head>
 
@@ -146,19 +105,38 @@
   <h1 style="font-size:x-large;">📸 Merve & Şükrü Nişan Anıları</h1>
   <p style="font-size:larger;"> Güzel anılarını bizimle paylaş!</p>
   <div id="fileCount"></div>
+
+  <!-- Seçim Modalı -->
+  <div id="pickerOverlay">
+    <div class="picker-sheet">
+      <h3 style="margin:6px 0 12px">Ne yüklemek istiyorsun?</h3>
+      <button class="btn" id="btnCamera"  style="background:#1e90ff; color:#fff;">📷 Kameradan Çek</button>
+      <button class="btn" id="btnFiles"   style="background:#00b894; color:#fff;">📁 Dosyalardan Seç (Hızlı)</button>
+      <button class="btn" id="btnGallery" style="background:#444; color:#fff;">🖼 Galeri (yavaş olabilir)</button>
+      <p class="hint">İpucu: iPhone’da “Dosyalar” genelde daha hızlıdır.</p>
+    </div>
+  </div>
+
   <div id="drop-zone">
     <div id="progressWrapper" style="display:none; margin-top: 10px;">
-      <div
-        style="background: #eee; border-radius: 10px; overflow: hidden; height: 20px; width: 100%; max-width: 600px;">
-        <div id="progressBar" style="height: 100%; width: 0%; background-color: #4caf50; transition: width 0.3s ease;">
-        </div>
+      <div style="background: #eee; border-radius: 10px; overflow: hidden; height: 20px; width: 100%; max-width: 600px;">
+        <div id="progressBar" style="height: 100%; width: 0%; background-color: #4caf50; transition: width 0.3s ease;"></div>
       </div>
       <div id="remainingTime" style="margin-top: 8px; font-size: 14px; color: #444;">Kalan süre: hesaplanıyor...</div>
     </div>
+
+    <!-- Orijinal input: fallback olarak kalsın -->
     <input type="file" id="fileInput" name="photos" accept="image/*,video/*" multiple />
-    <button class="btn" id="selectBtn" onclick="document.getElementById('fileInput').click()">📁 Dosya Seç</button>
+
+    <!-- Modalın tetikleyeceği yeni inputlar -->
+    <input id="inpCamera"  type="file" accept="image/*,video/*" capture="environment" multiple hidden>
+    <input id="inpFiles"   type="file" accept="image/*,video/*" multiple hidden>
+    <input id="inpGallery" type="file" accept="image/*,video/*" multiple hidden>
+
+    <button class="btn" id="selectBtn" onclick="openPicker()">📁 Dosya Seç</button>
     <button class="btn" id="uploadBtn" onclick="uploadFiles()" disabled>⬆️ Yükle</button>
     <button class="btn" id="showGalleryBtn" onclick="toggleGallery()">📂 Anıları Göster</button>
+
     <div id="preview-container"></div>
 
     <div id="success-message"
@@ -182,19 +160,82 @@
     const successMessage = document.getElementById("success-message");
     const selectBtn = document.getElementById("selectBtn");
     const showGalleryBtn = document.getElementById("showGalleryBtn");
-    let selectedFiles = [],
-      currentPage = 1,
-      totalPages = 1,
-      pageSize = 20;
 
-    input.addEventListener("change", () => {
-      const newFiles = Array.from(input.files);
-      newFiles.forEach(file => {
+    const overlay = document.getElementById('pickerOverlay');
+    const inpCamera  = document.getElementById('inpCamera');
+    const inpFiles   = document.getElementById('inpFiles');
+    const inpGallery = document.getElementById('inpGallery');
+    const dropZone   = document.getElementById('drop-zone');
+
+    let selectedFiles = [], currentPage = 1, totalPages = 1, pageSize = 20;
+
+    // ---- Seçim Modalı ----
+    function openPicker() { overlay.style.display = 'flex'; }
+    function closePicker() { overlay.style.display = 'none'; }
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closePicker(); });
+    document.getElementById('btnCamera').onclick  = () => inpCamera.click();
+    document.getElementById('btnFiles').onclick   = () => inpFiles.click();
+    document.getElementById('btnGallery').onclick = () => inpGallery.click();
+
+    // Tek noktadan dosya ekleme
+    function addFiles(files) {
+      const onlyMedia = Array.from(files).filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
+      const remaining = Math.max(0, MAX_FILES - selectedFiles.length);
+      const take = onlyMedia.slice(0, remaining);
+
+      let added = 0;
+      take.forEach(file => {
         const exists = selectedFiles.some(f => f.name === file.name && f.size === file.size);
-        if (!exists) selectedFiles.push(file);
+        if (!exists) { selectedFiles.push(file); added++; }
       });
-      input.value = "";
+
+      if (onlyMedia.length > take.length) {
+        alert(`En fazla ${MAX_FILES} dosya yükleyebilirsiniz. (${MAX_FILES} sınırı)`);
+      }
+      if (added === 0 && onlyMedia.length) {
+        // sadece kopya dosyalar seçilmişse
+        console.warn('Aynı dosyalar tekrar seçildi, eklenmedi.');
+      }
       updatePreview();
+    }
+
+    // Orijinal input (fallback)
+    input.addEventListener("change", () => {
+      if (input.files?.length) addFiles(input.files);
+      input.value = "";
+    });
+
+    // Yeni inputlar
+    [inpCamera, inpFiles, inpGallery].forEach(inp => {
+      inp.addEventListener('change', e => {
+        if (e.target.files?.length) addFiles(e.target.files);
+        e.target.value = '';
+        closePicker();
+      });
+    });
+
+    // Drag & Drop
+    ['dragenter', 'dragover'].forEach(ev => {
+      dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    });
+    ['dragleave', 'drop'].forEach(ev => {
+      dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.remove('dragover'); });
+    });
+    dropZone.addEventListener('drop', e => {
+      if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files);
+    });
+
+    // Panodan yapıştır (masaüstü)
+    window.addEventListener('paste', e => {
+      const items = e.clipboardData?.items || [];
+      const pasted = [];
+      for (const it of items) {
+        if (it.type?.startsWith('image/') || it.type?.startsWith('video/')) {
+          const file = it.getAsFile();
+          if (file) pasted.push(file);
+        }
+      }
+      if (pasted.length) addFiles(pasted);
     });
 
     function updatePreview() {
@@ -225,16 +266,17 @@
 
     async function uploadFiles() {
       if (!selectedFiles.length) return alert('Dosya seçilmedi.');
-      const newFiles = Array.from(input.files);
-      if (selectedFiles.length + newFiles.length > MAX_FILES) {
+      if (selectedFiles.length > MAX_FILES) {
         alert(`En fazla ${MAX_FILES} dosya yükleyebilirsiniz.`);
         return;
       }
+
       const formData = new FormData();
       for (const file of selectedFiles) formData.append('media', file);
+
       const xhr = new XMLHttpRequest();
       xhr.open('POST', '/api/upload');
-      const startTime = Date.now();
+
       xhr.upload.addEventListener('progress', e => {
         if (e.lengthComputable) {
           const percent = (e.loaded / e.total) * 100;
@@ -244,14 +286,10 @@
 
           document.getElementById('progressWrapper').style.display = 'block';
           document.getElementById('progressBar').style.width = percent.toFixed(1) + '%';
-
-          if (secondsRemaining > 60) {
-            const mins = Math.floor(secondsRemaining / 60);
-            const secs = Math.ceil(secondsRemaining % 60);
-            document.getElementById('remainingTime').innerText = `Kalan süre: ${mins} dakika ${secs} saniye`;
-          } else {
-            document.getElementById('remainingTime').innerText = `Kalan süre: ${Math.ceil(secondsRemaining)} saniye`;
-          }
+          document.getElementById('remainingTime').innerText =
+            secondsRemaining > 60
+              ? `Kalan süre: ${Math.floor(secondsRemaining/60)} dakika ${Math.ceil(secondsRemaining%60)} saniye`
+              : `Kalan süre: ${Math.ceil(secondsRemaining)} saniye`;
         }
       });
 
@@ -260,34 +298,25 @@
           document.getElementById('progressBar').style.width = '100%';
           document.getElementById('remainingTime').innerText = 'Yükleme tamamlandı ✅';
 
-          uploadBtn.disabled = false;
-          uploadBtn.innerHTML = '⬆️ Yükle';
-          selectBtn.disabled = false;
-          showGalleryBtn.disabled = false;
-          selectedFiles = [];
-          updatePreview();
+          uploadBtn.disabled = false; uploadBtn.innerHTML = '⬆️ Yükle';
+          selectBtn.disabled = false; showGalleryBtn.disabled = false;
+          selectedFiles = []; updatePreview();
+
           setTimeout(() => {
             document.getElementById('progressWrapper').style.display = 'none';
             document.getElementById('success-message').style.display = 'block';
           }, 3000);
-          setTimeout(() => {
-            document.getElementById('success-message').style.display = 'none';
-          }, 10000);
+          setTimeout(() => { document.getElementById('success-message').style.display = 'none'; }, 10000);
         }
       };
 
       uploadBtn.disabled = true;
       uploadBtn.innerHTML = 'Yükleniyor... <span class="loader"></span>';
-      selectBtn.disabled = true;
-      showGalleryBtn.disabled = true;
+      selectBtn.disabled = true; showGalleryBtn.disabled = true;
 
       xhr.send(formData);
     }
-    function formatTime(seconds) {
-      const mins = Math.floor(seconds / 60);
-      const secs = Math.round(seconds % 60);
-      return `${mins > 0 ? mins + ' dakika ' : ''}${secs} saniye`;
-    }
+
     async function toggleGallery() {
       const gallery = document.getElementById("gallery");
       if (gallery.style.display === "none") {
@@ -307,8 +336,8 @@
 
       result.files.forEach(file => {
         const ext = file.split('.').pop().toLowerCase();
-        const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
-        const isVideo = ['mp4', 'mov', 'avi', 'webm'].includes(ext);
+        const isImage = ['jpg','jpeg','png','gif','webp'].includes(ext);
+        const isVideo = ['mp4','mov','avi','webm'].includes(ext);
         const wrapper = document.createElement("div");
         wrapper.className = "gallery-item";
         wrapper.style = "position: relative; width: 160px; border: 1px solid #ccc; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.1); background: #fff;";
@@ -339,10 +368,7 @@
         btn.innerText = i;
         btn.className = "btn";
         btn.style = i === currentPage ? "background:#333; color:#fff;" : "background:#eee; color:#333;";
-        btn.onclick = () => {
-          currentPage = i;
-          renderGallery(currentPage);
-        };
+        btn.onclick = () => { currentPage = i; renderGallery(currentPage); };
         pagination.appendChild(btn);
       }
     }
@@ -352,31 +378,19 @@
   <script>
     function downloadSelected() {
       const checkboxes = document.querySelectorAll('.gallery-checkbox:checked');
-      if (checkboxes.length === 0) {
-        alert("Lütfen indirilecek dosya(ları) seçin.");
-        return;
-      }
-
-      const zip = new JSZip();
-      const folder = zip.folder("nisan-anilari");
-      let count = 0;
-
+      if (checkboxes.length === 0) { alert("Lütfen indirilecek dosya(ları) seçin."); return; }
+      const zip = new JSZip(); const folder = zip.folder("nisan-anilari"); let count = 0;
       checkboxes.forEach(cb => {
         const filename = cb.value;
-        fetch(`/uploads/${filename}`)
-          .then(res => res.blob())
-          .then(blob => {
-            folder.file(filename, blob);
-            count++;
-            if (count === checkboxes.length) {
-              zip.generateAsync({ type: "blob" }).then(content => {
-                const a = document.createElement("a");
-                a.href = URL.createObjectURL(content);
-                a.download = "nisan-anilari.zip";
-                a.click();
-              });
-            }
-          });
+        fetch(`/uploads/${filename}`).then(res => res.blob()).then(blob => {
+          folder.file(filename, blob); count++;
+          if (count === checkboxes.length) {
+            zip.generateAsync({ type: "blob" }).then(content => {
+              const a = document.createElement("a");
+              a.href = URL.createObjectURL(content); a.download = "nisan-anilari.zip"; a.click();
+            });
+          }
+        });
       });
     }
   </script>
@@ -386,13 +400,9 @@
     async function testUploadSpeed() {
       const size = 5 * 1024 * 1024;
       const testData = new Uint8Array(size).fill(97);
-
       const start = performance.now();
-      await fetch("/upload-speed-test", {
-        method: "POST",
-        body: testData
-      });
-      const duration = (performance.now() - start) / 1000; // saniye
+      await fetch("/upload-speed-test", { method: "POST", body: testData });
+      const duration = (performance.now() - start) / 1000;
       const speedBps = size / duration;
       const speedMbps = (speedBps * 8) / (1024 * 1024);
       estimatedUploadSpeedMbps = speedMbps;
@@ -400,7 +410,5 @@
     }
     testUploadSpeed();
   </script>
-
 </body>
-
 </html>
