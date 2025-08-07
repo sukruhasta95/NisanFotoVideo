@@ -106,14 +106,11 @@
   <p style="font-size:larger;"> Güzel anılarını bizimle paylaş!</p>
   <div id="fileCount"></div>
 
-  <!-- Seçim Modalı -->
   <div id="pickerOverlay">
     <div class="picker-sheet">
       <h3 style="margin:6px 0 12px">Ne yüklemek istiyorsun?</h3>
       <button class="btn" id="btnCamera"  style="background:#1e90ff; color:#fff;">📷 Kameradan Çek</button>
-      <button class="btn" id="btnFiles"   style="background:#00b894; color:#fff;">📁 Dosyalardan Seç (Hızlı)</button>
-      <button class="btn" id="btnGallery" style="background:#444; color:#fff;">🖼 Galeri (yavaş olabilir)</button>
-      <p class="hint">İpucu: iPhone’da “Dosyalar” genelde daha hızlıdır.</p>
+      <button class="btn" id="btnFiles"   style="background:#00b894; color:#fff;">📁 Dosyalardan Seç</button>
     </div>
   </div>
 
@@ -125,13 +122,10 @@
       <div id="remainingTime" style="margin-top: 8px; font-size: 14px; color: #444;">Kalan süre: hesaplanıyor...</div>
     </div>
 
-    <!-- Orijinal input: fallback olarak kalsın -->
     <input type="file" id="fileInput" name="photos" accept="image/*,video/*" multiple />
 
-    <!-- Modalın tetikleyeceği yeni inputlar -->
     <input id="inpCamera"  type="file" accept="image/*,video/*" capture="environment" multiple hidden>
     <input id="inpFiles"   type="file" accept="image/*,video/*" multiple hidden>
-    <input id="inpGallery" type="file" accept="image/*,video/*" multiple hidden>
 
     <button class="btn" id="selectBtn" onclick="openPicker()">📁 Dosya Seç</button>
     <button class="btn" id="uploadBtn" onclick="uploadFiles()" disabled>⬆️ Yükle</button>
@@ -164,20 +158,16 @@
     const overlay = document.getElementById('pickerOverlay');
     const inpCamera  = document.getElementById('inpCamera');
     const inpFiles   = document.getElementById('inpFiles');
-    const inpGallery = document.getElementById('inpGallery');
     const dropZone   = document.getElementById('drop-zone');
 
     let selectedFiles = [], currentPage = 1, totalPages = 1, pageSize = 20;
 
-    // ---- Seçim Modalı ----
     function openPicker() { overlay.style.display = 'flex'; }
     function closePicker() { overlay.style.display = 'none'; }
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closePicker(); });
     document.getElementById('btnCamera').onclick  = () => inpCamera.click();
     document.getElementById('btnFiles').onclick   = () => inpFiles.click();
-    document.getElementById('btnGallery').onclick = () => inpGallery.click();
 
-    // Tek noktadan dosya ekleme
     function addFiles(files) {
       const onlyMedia = Array.from(files).filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
       const remaining = Math.max(0, MAX_FILES - selectedFiles.length);
@@ -193,20 +183,17 @@
         alert(`En fazla ${MAX_FILES} dosya yükleyebilirsiniz. (${MAX_FILES} sınırı)`);
       }
       if (added === 0 && onlyMedia.length) {
-        // sadece kopya dosyalar seçilmişse
         console.warn('Aynı dosyalar tekrar seçildi, eklenmedi.');
       }
       updatePreview();
     }
 
-    // Orijinal input (fallback)
     input.addEventListener("change", () => {
       if (input.files?.length) addFiles(input.files);
       input.value = "";
     });
 
-    // Yeni inputlar
-    [inpCamera, inpFiles, inpGallery].forEach(inp => {
+    [inpCamera, inpFiles].forEach(inp => {
       inp.addEventListener('change', e => {
         if (e.target.files?.length) addFiles(e.target.files);
         e.target.value = '';
@@ -214,7 +201,6 @@
       });
     });
 
-    // Drag & Drop
     ['dragenter', 'dragover'].forEach(ev => {
       dropZone.addEventListener(ev, e => { e.preventDefault(); dropZone.classList.add('dragover'); });
     });
@@ -225,7 +211,6 @@
       if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files);
     });
 
-    // Panodan yapıştır (masaüstü)
     window.addEventListener('paste', e => {
       const items = e.clipboardData?.items || [];
       const pasted = [];
