@@ -185,7 +185,7 @@
         card.className = 'media-card';
         card.innerHTML = `
           <input type="checkbox" value="${file}">
-          ${isImage ? `<img src="/uploads/${file}">` : ''}
+          ${isImage ? `<img src="/uploads/${file}" style="cursor:pointer;" onclick="openImgModal('/uploads/${file}')">` : ''}
           ${isVideo ? `<video controls src="/uploads/${file}"></video>` : ''}
           <div class="media-actions">
             <span>${file}</span>
@@ -269,7 +269,7 @@
       );
       await Promise.all(sizeFetches);
       const estimatedSeconds = (totalSizeBytes) / (estimatedDownloadSpeedMbps * 1024 * 1024);
-      console.log("toplam dosya boyutu:",totalSizeBytes)
+      console.log("toplam dosya boyutu:", totalSizeBytes)
       let secondsRemaining = estimatedSeconds;
       countdownText.innerText = `Dosyalar hazırlanıyor. Tahmini süre: ${Math.ceil(secondsRemaining)} sn`;
       const countdownInterval = setInterval(() => {
@@ -303,7 +303,7 @@
   </script>
 
   <script>
-    let estimatedDownloadSpeedMbps = 30; 
+    let estimatedDownloadSpeedMbps = 30;
     async function measureDownloadSpeed() {
       const testUrl = "https://speed.cloudflare.com/__down?bytes=5000000";
       try {
@@ -315,12 +315,50 @@
         const duration = (end - start) / 1000;
         const bitsLoaded = blob.size * 8;
         estimatedDownloadSpeedMbps = bitsLoaded / duration / 1024 / 1024;
-         console.log("estimatedDownloadSpeedMbps", estimatedDownloadSpeedMbps);
+        console.log("estimatedDownloadSpeedMbps", estimatedDownloadSpeedMbps);
       } catch (err) {
         console.log("Hız ölçümünde hata:", err);
       }
     }
     measureDownloadSpeed();
+  </script>
+
+  <div id="imgModal" style="
+  display:none; 
+  position:fixed; 
+  z-index:99999; 
+  top:0; left:0; right:0; bottom:0; 
+  background:rgba(0,0,0,0.9); 
+  justify-content:center; 
+  align-items:center;">
+
+    <span onclick="closeImgModal()" style="
+    position:absolute; 
+    top:2%; 
+    left:90%; 
+    color:#fff; 
+    font-size:xx-large; 
+    font-weight:bold; 
+    cursor:pointer;">&times;</span>
+    <img id="imgModalContent" style="max-width:90%; max-height:90%; border-radius:10px;">
+  </div>
+
+  <script>
+    function openImgModal(src) {
+      const modal = document.getElementById('imgModal');
+      document.getElementById('imgModalContent').src = src;
+      modal.style.display = 'flex';
+    }
+
+    function closeImgModal() {
+      document.getElementById('imgModal').style.display = 'none';
+    }
+
+    document.getElementById('imgModal').addEventListener('click', function (e) {
+      if (e.target.id === 'imgModal') {
+        closeImgModal();
+      }
+    });
   </script>
 
 </body>
