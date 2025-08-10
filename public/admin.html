@@ -290,7 +290,7 @@
         })
       );
       await Promise.all(sizeFetches);
-      const estimatedSeconds = (totalSizeBytes) / (estimatedDownloadSpeedMbps * 1024 * 1024);
+      const estimatedSeconds = totalSizeBytes / ((estimatedDownloadSpeedMbps * 1024 * 1024) / 8);
       console.log("toplam dosya boyutu:", totalSizeBytes)
       let secondsRemaining = estimatedSeconds;
       countdownText.innerText = `Dosyalar hazırlanıyor. Tahmini süre: ${Math.ceil(secondsRemaining)} sn`;
