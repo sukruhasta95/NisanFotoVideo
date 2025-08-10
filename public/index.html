@@ -147,7 +147,7 @@
 
     /* Seçim Modalı */
     #pickerOverlay {
-      display: none;
+      display: none !important;
       position: fixed;
       inset: 0;
       z-index: 9999;
@@ -240,7 +240,7 @@
 
     let selectedFiles = [], currentPage = 1, totalPages = 1, pageSize = 20;
 
-    function openPicker() { overlay.style.display = 'flex'; }
+    function openPicker() { inpFiles.click(); }
     function closePicker() { overlay.style.display = 'none'; }
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closePicker(); });
     document.getElementById('btnCamera').onclick = () => inpCamera.click();
