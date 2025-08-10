@@ -168,6 +168,7 @@
     let currentPage = 1;
     const pageSize = 20;
 
+
     async function fetchMedia(page = 1) {
       currentPage = page;
       const res = await fetch(`/uploads?page=${page}&pageSize=${pageSize}`);
@@ -176,21 +177,42 @@
       const grid = document.getElementById('mediaGrid');
       grid.innerHTML = '';
 
-      files.forEach(file => {
+      files.forEach((file, i) => {
         const ext = file.split('.').pop().toLowerCase();
         const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
         const isVideo = ['mp4', 'mov', 'webm'].includes(ext);
 
         const card = document.createElement('div');
         card.className = 'media-card';
-        card.innerHTML = `
-          <input type="checkbox" value="${file}">
-          ${isImage ? `<img src="/uploads/${file}" style="cursor:pointer;" onclick="openImgModal('/uploads/${file}')">` : ''}
-          ${isVideo ? `<video controls src="/uploads/${file}"></video>` : ''}
-          <div class="media-actions">
-            <span>${file}</span>
-          </div>
-        `;
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = file;
+        card.appendChild(cb);
+
+        if (isImage) {
+          const img = document.createElement('img');
+          img.src = `/uploads/${encodeURI(file)}`;
+          img.style.cursor = 'pointer';
+          img.addEventListener('click', () => openLightbox(files, i));
+          card.appendChild(img);
+        } else if (isVideo) {
+          const vid = document.createElement('video');
+          vid.src = `/uploads/${encodeURI(file)}`;
+          vid.controls = true;
+          vid.style.cursor = 'pointer';
+          vid.addEventListener('click', () => openLightbox(files, i));
+          card.appendChild(vid);
+        }
+
+        const actions = document.createElement('div');
+        actions.className = 'media-actions';
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = file;
+        nameSpan.title = file;
+        actions.appendChild(nameSpan);
+        card.appendChild(actions);
+
         grid.appendChild(card);
       });
 
@@ -359,6 +381,130 @@
         closeImgModal();
       }
     });
+  </script>
+
+  <!-- UNIVERSAL LIGHTBOX (foto + video) -->
+  <div id="lightbox" style="
+  display:none; position:fixed; inset:0; z-index:99999;
+  background:rgba(0,0,0,.92); justify-content:center; align-items:center;">
+    <!-- Kapat -->
+    <button id="lbClose" aria-label="Kapat" style="
+    position:absolute; top:16px; right:20px; font-size:28px; 
+    background:transparent; color:#fff; border:0; cursor:pointer;">✕</button>
+    <!-- Önceki -->
+    <button id="lbPrev" aria-label="Önceki" style="
+    position:absolute; left:2%; top:50%; transform:translateY(-50%);
+    background:transparent; color:#fff; border:0; font-size:42px; cursor:pointer;">‹</button>
+    <!-- Sonraki -->
+    <button id="lbNext" aria-label="Sonraki" style="
+    position:absolute; right:2%; top:50%; transform:translateY(-50%);
+    background:transparent; color:#fff; border:0; font-size:42px; cursor:pointer;">›</button>
+
+    <!-- İçerik -->
+    <div id="lbContent" style="max-width:92vw; max-height:92vh;"></div>
+  </div>
+
+  <script>
+    // Lightbox state
+    let LB_FILES = [];   // ['a.jpg','b.mp4', ...]
+    let LB_INDEX = 0;
+    const lb = document.getElementById('lightbox');
+    const lbContent = document.getElementById('lbContent');
+
+    function isImg(name) {
+      const ext = name.split('.').pop()?.toLowerCase();
+      return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+    }
+    function isVid(name) {
+      const ext = name.split('.').pop()?.toLowerCase();
+      return ['mp4', 'mov', 'webm', 'mkv', 'avi'].includes(ext);
+    }
+
+    function openLightbox(files, startIndex) {
+      LB_FILES = files.slice();
+      LB_INDEX = startIndex || 0;
+      renderLB();
+      lb.style.display = 'flex';
+    }
+
+    function closeLightbox() {
+      // Video oynuyorsa durdur
+      const v = lbContent.querySelector('video');
+      if (v) { v.pause(); v.src = ''; }
+      lb.style.display = 'none';
+      lbContent.innerHTML = '';
+    }
+
+    function renderLB() {
+      const name = LB_FILES[LB_INDEX];
+      lbContent.innerHTML = '';
+      if (isImg(name)) {
+        const img = document.createElement('img');
+        img.src = `/uploads/${encodeURI(name)}`;
+        img.style.maxWidth = '92vw';
+        img.style.maxHeight = '92vh';
+        img.style.borderRadius = '10px';
+        img.alt = name;
+        lbContent.appendChild(img);
+      } else if (isVid(name)) {
+        const vid = document.createElement('video');
+        vid.src = `/uploads/${encodeURI(name)}`;
+        vid.controls = true;
+        vid.autoplay = true;
+        vid.style.maxWidth = '92vw';
+        vid.style.maxHeight = '92vh';
+        lbContent.appendChild(vid);
+      } else {
+        const p = document.createElement('p');
+        p.textContent = name;
+        p.style.color = '#fff';
+        lbContent.appendChild(p);
+      }
+      // basit preload (ileri/geri)
+      const next = LB_FILES[(LB_INDEX + 1) % LB_FILES.length];
+      const prev = LB_FILES[(LB_INDEX - 1 + LB_FILES.length) % LB_FILES.length];
+      if (next && isImg(next)) new Image().src = `/uploads/${encodeURI(next)}`;
+      if (prev && isImg(prev)) new Image().src = `/uploads/${encodeURI(prev)}`;
+    }
+
+    function lbNext() {
+      LB_INDEX = (LB_INDEX + 1) % LB_FILES.length;
+      renderLB();
+    }
+    function lbPrev() {
+      LB_INDEX = (LB_INDEX - 1 + LB_FILES.length) % LB_FILES.length;
+      renderLB();
+    }
+
+    // Butonlar
+    document.getElementById('lbClose').onclick = closeLightbox;
+    document.getElementById('lbNext').onclick = lbNext;
+    document.getElementById('lbPrev').onclick = lbPrev;
+
+    // Arka plana tıklayınca kapat
+    lb.addEventListener('click', (e) => {
+      if (e.target === lb) closeLightbox();
+    });
+
+    // Klavye: ESC/←/→
+    document.addEventListener('keydown', (e) => {
+      if (lb.style.display === 'flex') {
+        if (e.key === 'Escape') closeLightbox();
+        if (e.key === 'ArrowRight') lbNext();
+        if (e.key === 'ArrowLeft') lbPrev();
+      }
+    });
+
+    // Dokunmatik swipe (telefon/tablet)
+    let touchStartX = 0, touchEndX = 0;
+    lb.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
+    lb.addEventListener('touchend', (e) => {
+      touchEndX = e.changedTouches[0].screenX;
+      const dx = touchEndX - touchStartX;
+      if (Math.abs(dx) > 50) { // eşik
+        if (dx < 0) lbNext(); else lbPrev();
+      }
+    }, { passive: true });
   </script>
 
 </body>
